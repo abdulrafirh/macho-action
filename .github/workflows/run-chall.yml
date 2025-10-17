@@ -1,0 +1,42 @@
+name: Run ARM64 Mach-O and extract PBM
+
+on:
+  workflow_dispatch:
+    inputs:
+      hex_input:
+        description: 'Hex input to feed chall (first 10 hex digits used)'
+        required: true
+        default: 'c7c394e43f5870bb33c5614fa720f177'
+
+jobs:
+  run:
+    # Apple Silicon runners (arm64). If your org lacks these,
+    # try macos-14, macos-15, or macos-14-large as available.
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show system info (debug)
+        run: |
+          uname -a
+          file chall || true
+
+      - name: Ensure executable
+        run: chmod +x ./chall
+
+      - name: Run chall to produce PBM
+        run: |
+          chmod +x ./chall
+          echo "${{ github.event.inputs.hex_input }}" | ./chall > out.pbm
+          head -n 5 out.pbm
+          echo "=== PBM size check ==="
+          awk 'NR==2{print "Declared size:", $0} END{print "Total lines:", NR}' out.pbm
+
+      - name: Upload PBM
+        uses: actions/upload-artifact@v4
+        with:
+          name: pbm-output
+          path: out.pbm
+          if-no-files-found: error
